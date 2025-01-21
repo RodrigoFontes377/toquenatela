@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -8,40 +8,35 @@ import {
   Alert,
   TouchableOpacity,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Camera } from "expo-camera";
+import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
 import * as FileSystem from "expo-file-system";
 
 export default function ReactionGameScreen() {
+  const [facing, setFacing] = useState("front");
   const [isWaiting, setIsWaiting] = useState(false);
   const [startTime, setStartTime] = useState(null);
   const [reactionTime, setReactionTime] = useState(null);
   const [playerName, setPlayerName] = useState("");
-  const [hasPermission, setHasPermission] = useState(null);
   const cameraRef = useRef(null);
 
-  useEffect(() => {
-    (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === "granted");
-    })();
-  }, []);
+  const [permission, requestPermission] = useCameraPermissions();
 
-  const takeHiddenPicture = async () => {
-    if (cameraRef.current) {
-      try {
-        const photo = await cameraRef.current.takePictureAsync({
-          skipProcessing: true,
-        });
-        const fileName = `${FileSystem.documentDirectory}${Date.now()}.jpg`;
-        await FileSystem.moveAsync({
-          from: photo.uri,
-          to: fileName,
-        });
-      } catch (error) {
-        console.error("Erro ao tirar foto:", error);
-      }
-    }
+  if (!permission) {
+    console.log("Carregando permissões da câmera...");
+    return <View />;
+  }
+
+  if (!permission.granted) {
+    return (
+      <View style={styles.container}>
+        <Text>Precisamos da permissão para acessar a câmera.</Text>
+        <Button onPress={requestPermission} title="Conceder Permissão" />
+      </View>
+    );
+  }
+
+  const toggleCameraFacing = () => {
+    setFacing((current) => (current === "front" ? "back" : "front"));
   };
 
   const startGame = () => {
@@ -70,44 +65,41 @@ export default function ReactionGameScreen() {
     if (startTime) {
       const time = Date.now() - startTime;
       setReactionTime(time);
-      await saveReactionTime(playerName, time);
-      await takeHiddenPicture();
+      await saveReactionTimeAndPhoto(playerName, time);
     } else {
       Alert.alert("Atenção", 'Pressione o botão "Iniciar" para começar.');
     }
   };
 
-  const saveReactionTime = async (name, time) => {
+  const takePhoto = async () => {
+    if (cameraRef.current) {
+      const photo = await cameraRef.current.takePictureAsync({ base64: true });
+      return photo.base64;
+    }
+    return null;
+  };
+
+  const saveReactionTimeAndPhoto = async (name, time) => {
+    const fileName = `${FileSystem.documentDirectory}${Date.now()}.jpg`;
+
     try {
-      const existingData = await AsyncStorage.getItem("reactionData");
-      const data = existingData ? JSON.parse(existingData) : {};
-
-      if (!data[name]) {
-        data[name] = [];
+      const photoBase64 = await takePhoto();
+      if (photoBase64) {
+        await FileSystem.writeAsStringAsync(fileName, photoBase64, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        console.log("Foto salva em:", fileName);
+      } else {
+        console.error("Erro ao capturar a foto.");
       }
-
-      data[name].push(time);
-
-      await AsyncStorage.setItem("reactionData", JSON.stringify(data));
     } catch (error) {
-      console.error("Erro ao salvar o tempo de reação:", error);
+      console.error("Erro ao salvar a foto:", error);
     }
   };
 
-  if (hasPermission === null) {
-    return <View />;
-  }
-  if (hasPermission === false) {
-    return <Text>Permissão para acessar a câmera negada.</Text>;
-  }
-
   return (
     <View style={styles.container}>
-      <Camera
-        style={styles.camera}
-        type={Camera.Constants.Type.front}
-        ref={cameraRef}
-      >
+      <CameraView ref={cameraRef} style={styles.camera} facing={facing}>
         <View style={styles.overlay}>
           <Text style={styles.title}>Reaja Rápido</Text>
           <TextInput
@@ -134,8 +126,11 @@ export default function ReactionGameScreen() {
               Seu tempo de reação: {reactionTime} ms
             </Text>
           )}
+          <TouchableOpacity onPress={toggleCameraFacing} style={styles.button}>
+            <Text style={styles.text}>Alternar Câmera</Text>
+          </TouchableOpacity>
         </View>
-      </Camera>
+      </CameraView>
     </View>
   );
 }
@@ -172,4 +167,11 @@ const styles = StyleSheet.create({
   ready: { backgroundColor: "#00CC66" },
   zoneText: { fontSize: 18, color: "#FFFFFF" },
   result: { fontSize: 18, color: "white", marginTop: 20 },
+  button: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: "#007BFF",
+    borderRadius: 5,
+  },
+  text: { fontSize: 18, color: "white", textAlign: "center" },
 });
