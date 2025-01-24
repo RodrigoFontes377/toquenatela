@@ -4,7 +4,6 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import ReactionGameScreen from "./screens/ReactionGameScreen";
 import ReactionHistoryScreen from "./screens/ReactionHistoryScreen";
-import GalleryScreen from "./screens/GalleryScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -42,7 +41,6 @@ export default function App() {
       >
         <Tab.Screen name="Jogar" component={ReactionGameScreen} />
         <Tab.Screen name="Ranking" component={ReactionHistoryScreen} />
-        <Tab.Screen name="Galeria" component={GalleryScreen} />
       </Tab.Navigator>
     </NavigationContainer>
   );

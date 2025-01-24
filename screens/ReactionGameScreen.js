@@ -9,10 +9,9 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
-import * as FileSystem from "expo-file-system";
+import * as MediaLibrary from "expo-media-library";
 
 export default function ReactionGameScreen() {
-  const [facing, setFacing] = useState("front");
   const [isWaiting, setIsWaiting] = useState(false);
   const [startTime, setStartTime] = useState(null);
   const [reactionTime, setReactionTime] = useState(null);
@@ -20,6 +19,8 @@ export default function ReactionGameScreen() {
   const cameraRef = useRef(null);
 
   const [permission, requestPermission] = useCameraPermissions();
+  const [mediaPermission, requestMediaPermission] =
+    MediaLibrary.usePermissions();
 
   if (!permission) {
     console.log("Carregando permissões da câmera...");
@@ -28,16 +29,26 @@ export default function ReactionGameScreen() {
 
   if (!permission.granted) {
     return (
-      <View style={styles.container}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <Text>Precisamos da permissão para acessar a câmera.</Text>
         <Button onPress={requestPermission} title="Conceder Permissão" />
       </View>
     );
   }
 
-  const toggleCameraFacing = () => {
-    setFacing((current) => (current === "front" ? "back" : "front"));
-  };
+  if (!mediaPermission) {
+    console.log("Carregando permissões da biblioteca...");
+    return <View />;
+  }
+
+  if (!mediaPermission.granted) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text>Precisamos da permissão para acessar a câmera.</Text>
+        <Button onPress={requestMediaPermission} title="Conceder Permissão" />
+      </View>
+    );
+  }
 
   const startGame = () => {
     if (!playerName.trim()) {
@@ -71,26 +82,31 @@ export default function ReactionGameScreen() {
     }
   };
 
-  const takePhoto = async () => {
+  async function takePhoto() {
     if (cameraRef.current) {
-      const photo = await cameraRef.current.takePictureAsync({ base64: true });
-      return photo.base64;
+      const photo = await cameraRef.current.takePictureAsync();
+      console.log("Foto capturada:", photo.uri);
+      return photo;
     }
-    return null;
-  };
+  }
+
+  // const saveReactionTimeAndPhoto = async (name, time) => {
+  //   try {
+  //     const asset = await MediaLibrary.createAssetAsync(takePhoto().uri);
+  //     console.log("Foto salva na galeria:", asset.uri);
+  //   } catch (error) {
+  //     console.error("Erro ao salvar a foto:", error);
+  //   }
+  // };
 
   const saveReactionTimeAndPhoto = async (name, time) => {
-    const fileName = `${FileSystem.documentDirectory}${Date.now()}.jpg`;
-
     try {
-      const photoBase64 = await takePhoto();
-      if (photoBase64) {
-        await FileSystem.writeAsStringAsync(fileName, photoBase64, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-        console.log("Foto salva em:", fileName);
+      const photo = await takePhoto(); // Wait for the photo to be taken
+      if (photo && photo.uri) {
+        const asset = await MediaLibrary.createAssetAsync(photo.uri);
+        console.log("Foto salva na galeria:", asset.uri);
       } else {
-        console.error("Erro ao capturar a foto.");
+        console.error("Erro: Foto não capturada.");
       }
     } catch (error) {
       console.error("Erro ao salvar a foto:", error);
@@ -99,7 +115,7 @@ export default function ReactionGameScreen() {
 
   return (
     <View style={styles.container}>
-      <CameraView ref={cameraRef} style={styles.camera} facing={facing}>
+      <CameraView ref={cameraRef} style={styles.camera} facing="front">
         <View style={styles.overlay}>
           <Text style={styles.title}>Reaja Rápido</Text>
           <TextInput
@@ -126,9 +142,6 @@ export default function ReactionGameScreen() {
               Seu tempo de reação: {reactionTime} ms
             </Text>
           )}
-          <TouchableOpacity onPress={toggleCameraFacing} style={styles.button}>
-            <Text style={styles.text}>Alternar Câmera</Text>
-          </TouchableOpacity>
         </View>
       </CameraView>
     </View>
