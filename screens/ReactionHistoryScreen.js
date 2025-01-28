@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,26 +8,29 @@ import {
   Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
 
 export default function ReactionHistoryScreen() {
   const [ranking, setRanking] = useState([]);
 
-  useEffect(() => {
-    const loadRanking = async () => {
-      const storedData = await AsyncStorage.getItem("reactionData");
-      const data = storedData ? JSON.parse(storedData) : {};
-      const rankingArray = Object.keys(data)
-        .map((name) => ({
-          name,
-          bestTime: Math.min(...data[name]),
-        }))
-        .sort((a, b) => a.bestTime - b.bestTime);
+  const loadRanking = async () => {
+    const storedData = await AsyncStorage.getItem("reactionData");
+    const data = storedData ? JSON.parse(storedData) : {};
+    const rankingArray = Object.keys(data)
+      .map((name) => ({
+        name,
+        bestTime: Math.min(...data[name]),
+      }))
+      .sort((a, b) => a.bestTime - b.bestTime);
 
-      setRanking(rankingArray);
-    };
+    setRanking(rankingArray);
+  };
 
-    loadRanking();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadRanking();
+    }, [])
+  );
 
   const clearData = async () => {
     Alert.alert("Confirmação", "Deseja apagar o ranking?", [

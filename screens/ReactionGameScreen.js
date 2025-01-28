@@ -7,9 +7,11 @@ import {
   StyleSheet,
   Alert,
   TouchableOpacity,
+  ImageBackground,
 } from "react-native";
-import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import * as MediaLibrary from "expo-media-library";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function ReactionGameScreen() {
   const [isWaiting, setIsWaiting] = useState(false);
@@ -90,67 +92,77 @@ export default function ReactionGameScreen() {
     }
   }
 
-  // const saveReactionTimeAndPhoto = async (name, time) => {
-  //   try {
-  //     const asset = await MediaLibrary.createAssetAsync(takePhoto().uri);
-  //     console.log("Foto salva na galeria:", asset.uri);
-  //   } catch (error) {
-  //     console.error("Erro ao salvar a foto:", error);
-  //   }
-  // };
-
   const saveReactionTimeAndPhoto = async (name, time) => {
     try {
-      const photo = await takePhoto(); // Wait for the photo to be taken
+      const photo = await takePhoto();
       if (photo && photo.uri) {
         const asset = await MediaLibrary.createAssetAsync(photo.uri);
         console.log("Foto salva na galeria:", asset.uri);
       } else {
         console.error("Erro: Foto não capturada.");
       }
+
+      // Salvar tempo de reação no AsyncStorage
+      const storedData = await AsyncStorage.getItem("reactionData");
+      const data = storedData ? JSON.parse(storedData) : {};
+      if (!data[name]) {
+        data[name] = [];
+      }
+      data[name].push(time);
+
+      await AsyncStorage.setItem("reactionData", JSON.stringify(data));
     } catch (error) {
-      console.error("Erro ao salvar a foto:", error);
+      console.error("Erro ao salvar a foto e os dados:", error);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <CameraView ref={cameraRef} style={styles.camera} facing="front">
-        <View style={styles.overlay}>
-          <Text style={styles.title}>Reaja Rápido</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Digite seu nome"
-            value={playerName}
-            onChangeText={setPlayerName}
-          />
-          <Button title="Iniciar" onPress={startGame} color="#007BFF" />
-          <View style={styles.spacer} />
-          <TouchableOpacity
-            style={[
-              styles.touchZone,
-              isWaiting ? styles.waiting : styles.ready,
-            ]}
-            onPress={handlePress}
-          >
-            <Text style={styles.zoneText}>
-              {isWaiting ? "Espere..." : "Toque Agora!"}
-            </Text>
-          </TouchableOpacity>
-          {reactionTime && (
-            <Text style={styles.result}>
-              Seu tempo de reação: {reactionTime} ms
-            </Text>
-          )}
-        </View>
-      </CameraView>
-    </View>
+    <ImageBackground
+      source={require("../assets/WhatsApp Image 2025-01-28 at 16.59.35.jpeg")}
+    >
+      <View style={styles.overlay}>
+        <CameraView
+          ref={cameraRef}
+          style={styles.hiddenCamera}
+          facing="front"
+        />
+        <Text style={styles.title}>Reaja Rápido</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Digite seu nome"
+          value={playerName}
+          onChangeText={setPlayerName}
+        />
+        <Button title="Iniciar" onPress={startGame} color="#007BFF" />
+        <View style={styles.spacer} />
+        <TouchableOpacity
+          style={[styles.touchZone, isWaiting ? styles.waiting : styles.ready]}
+          onPress={handlePress}
+        >
+          <Text style={styles.zoneText}>
+            {isWaiting ? "Espere..." : "Toque Agora!"}
+          </Text>
+        </TouchableOpacity>
+        {reactionTime && (
+          <Text style={styles.result}>
+            Seu tempo de reação: {reactionTime} ms
+          </Text>
+        )}
+      </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  camera: { flex: 1 },
+  background: { flex: 1 },
+  camera: {
+    flex: 1,
+    position: "absolute",
+    width: "100%",
+    height: "50%",
+    top: 0,
+  },
   overlay: {
     flex: 1,
     justifyContent: "center",
@@ -180,11 +192,7 @@ const styles = StyleSheet.create({
   ready: { backgroundColor: "#00CC66" },
   zoneText: { fontSize: 18, color: "#FFFFFF" },
   result: { fontSize: 18, color: "white", marginTop: 20 },
-  button: {
-    marginTop: 20,
-    padding: 10,
-    backgroundColor: "#007BFF",
-    borderRadius: 5,
+  hiddenCamera: {
+    display: "none",
   },
-  text: { fontSize: 18, color: "white", textAlign: "center" },
 });
