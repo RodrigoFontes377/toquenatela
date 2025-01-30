@@ -102,7 +102,7 @@ export default function ReactionGameScreen() {
         console.error("Erro: Foto não capturada.");
       }
 
-      // Salvar tempo de reação no AsyncStorage
+      // Salvar tempo de reação
       const storedData = await AsyncStorage.getItem("reactionData");
       const data = storedData ? JSON.parse(storedData) : {};
       if (!data[name]) {
@@ -119,6 +119,7 @@ export default function ReactionGameScreen() {
   return (
     <ImageBackground
       source={require("../assets/WhatsApp Image 2025-01-28 at 16.59.35.jpeg")}
+      style={styles.background}
     >
       <View style={styles.overlay}>
         <CameraView

@@ -4,6 +4,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import ReactionGameScreen from "./screens/ReactionGameScreen";
 import ReactionHistoryScreen from "./screens/ReactionHistoryScreen";
+import InstructionsScreen from "./screens/InstructionsScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -20,8 +21,8 @@ export default function App() {
               iconName = require("./assets/play.png");
             } else if (route.name === "Ranking") {
               iconName = require("./assets/ranking.png");
-            } else if (route.name === "Galeria") {
-              iconName = require("./assets/gallery.png");
+            } else if (route.name === "Instruções") {
+              iconName = require("./assets/casa.png");
             }
 
             return (
@@ -39,6 +40,7 @@ export default function App() {
           tabBarInactiveTintColor: "#888",
         })}
       >
+        <Tab.Screen name="Instruções" component={InstructionsScreen} />
         <Tab.Screen name="Jogar" component={ReactionGameScreen} />
         <Tab.Screen name="Ranking" component={ReactionHistoryScreen} />
       </Tab.Navigator>
